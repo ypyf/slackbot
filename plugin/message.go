@@ -14,13 +14,14 @@ var BotCommands []Commander
 
 type Message struct {
 	*slack.RTM
+	BotName string
 	Text    string
 	Channel string
 	buffer  string
 }
 
-func NewMessage(rtm *slack.RTM, text, channel string) *Message {
-	return &Message{rtm, text, channel, ""}
+func NewMessage(rtm *slack.RTM, botName, text, channel string) *Message {
+	return &Message{rtm, botName, text, channel, ""}
 }
 
 func (m *Message) Send(msg string) {

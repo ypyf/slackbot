@@ -9,7 +9,7 @@ type Help struct {
 }
 
 func (self *Help) Matches(text string) bool {
-	return strings.HasPrefix(text, "help")
+	return strings.HasPrefix(text, "help") || strings.Contains(text, "帮助")
 }
 
 func (self *Help) Respond(msg *Message) error {

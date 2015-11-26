@@ -1,13 +1,11 @@
 package plugin
 
 import (
-	"fmt"
+//"fmt"
 	"strings"
 )
 
-type Nginx struct {
-	Name string
-}
+type Nginx struct{}
 
 func (w *Nginx) Matches(text string) bool {
 	return strings.HasPrefix(text, "nginx")
@@ -28,14 +26,13 @@ func (w *Nginx) Respond(msg *Message) error {
 				}
 				out, err := ExecShell("tail", "/var/log/nginx/" + filename)
 				if err != nil {
-					return fmt.Errorf("%s遇到了点麻烦，正在紧张处理中...", w.Name)
+					return err
 				}
 				msg.Send(out)
 			}
 		}
 	}
 	msg.Done()
-
 	return nil
 }
 
