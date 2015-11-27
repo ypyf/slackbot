@@ -4,6 +4,11 @@ import (
 	"github.com/nlopes/slack"
 )
 
+const (
+	S_INIT = iota
+	S_PROCESSING = iota
+)
+
 type Commander interface {
 	Matches(text string) bool
 	Respond(msg *Message) error
@@ -12,16 +17,28 @@ type Commander interface {
 
 var BotCommands []Commander
 
+type Session struct {
+	Handler Commander
+	Status int32
+	params interface{}
+}
+
+func (s *Session) ResetSession() {
+	s.Status = S_INIT
+}
+
+
 type Message struct {
 	*slack.RTM
+	*Session
 	BotName string
 	Text    string
 	Channel string
 	buffer  string
 }
 
-func NewMessage(rtm *slack.RTM, botName, text, channel string) *Message {
-	return &Message{rtm, botName, text, channel, ""}
+func NewMessage(rtm *slack.RTM, session *Session, botName, text, channel string) *Message {
+	return &Message{rtm, session, botName, text, channel, ""}
 }
 
 func (m *Message) Send(msg string) {

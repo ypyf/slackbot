@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/nlopes/slack"
 	"os"
 	"regexp"
 	"strings"
+	"github.com/nlopes/slack"
 
 	"slackbot/plugin"
 )
@@ -28,30 +28,54 @@ func checkMessage(msg string) (string, bool) {
 	return s[2], s[1] == botID
 }
 
-func handleCommand(rtm *slack.RTM, botName, channel, sender, text string) {
-	for _, v := range plugin.BotCommands {
-		if v.Matches(text) {
-			msg := plugin.NewMessage(rtm, botName, text, channel)
-			if err := v.Respond(msg); err != nil {
-				var reply string
-				if debug_mode {
-					reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
-				} else {
-					reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
-				}
-				rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
+func handleCommand(rtm *slack.RTM, session *plugin.Session, botName, channel, sender, text string) {
+	// 处理会话
+	if session.Status != plugin.S_INIT {
+		msg := plugin.NewMessage(rtm, session, botName, text, channel)
+		if err := session.Handler.Respond(msg); err != nil {
+			var reply string
+			if debug_mode {
+				reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
+			} else {
+				reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
 			}
-			break
+			rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
+		}
+	} else {
+		found := false
+		for _, v := range plugin.BotCommands {
+			if v.Matches(text) {
+				found = true
+				msg := plugin.NewMessage(rtm, session, botName, text, channel)
+				if err := v.Respond(msg); err != nil {
+					var reply string
+					if debug_mode {
+						reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
+					} else {
+						reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
+					}
+					rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
+				}
+				break
+			}
+		}
+		if !found {
+			// echo received text
+			rtm.SendMessage(rtm.NewOutgoingMessage(text, channel))
 		}
 	}
-	return
 }
 
 func handleMessage(rtm *slack.RTM) {
+	// 会话
+	session := new(plugin.Session)
+	session.ResetSession()
+
 	// 注册命令处理器
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Help))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Hello))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Time))
+	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Mail))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Service))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Nginx))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Joke))
@@ -79,11 +103,10 @@ func handleMessage(rtm *slack.RTM) {
 				if evt.Channel == botChannelID && evt.Team == mxTeamID {
 					text, sendToMXBot := checkMessage(evt.Text)
 					if sendToMXBot && len(text) > 0 {
-						//fmt.Printf("接收到机器人指令： %v", evt)
-						go handleCommand(rtm, botName, evt.Channel, evt.User, strings.TrimSpace(text))
+						go handleCommand(rtm, session, botName, evt.Channel, evt.User, strings.TrimSpace(text))
 					}
 				} else if evt.Channel == botDMChannelID && evt.Team == mxTeamID {
-					go handleCommand(rtm, botName, evt.Channel, evt.User, strings.TrimSpace(evt.Text))
+					go handleCommand(rtm, session, botName, evt.Channel, evt.User, strings.TrimSpace(evt.Text))
 				}
 			case *slack.ChannelJoinedEvent:
 			// Ignore
