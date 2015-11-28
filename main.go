@@ -28,34 +28,30 @@ func checkMessage(msg string) (string, bool) {
 	return s[2], s[1] == botID
 }
 
+func checkError(err error, rtm *slack.RTM, botName, channel string) {
+	if err != nil {
+		var reply string
+		if debug_mode {
+			reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
+		} else {
+			reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
+		}
+		rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
+	}
+}
+
 func handleCommand(rtm *slack.RTM, session *plugin.Session, botName, channel, sender, text string) {
 	// 处理会话
 	if session.Status != plugin.S_INIT {
 		msg := plugin.NewMessage(rtm, session, botName, text, channel)
-		if err := session.Handler.Respond(msg); err != nil {
-			var reply string
-			if debug_mode {
-				reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
-			} else {
-				reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
-			}
-			rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
-		}
+		checkError(session.Handler.Respond(msg), rtm, botName, channel)
 	} else {
 		found := false
 		for _, v := range plugin.BotCommands {
 			if v.Matches(text) {
 				found = true
 				msg := plugin.NewMessage(rtm, session, botName, text, channel)
-				if err := v.Respond(msg); err != nil {
-					var reply string
-					if debug_mode {
-						reply = fmt.Sprintf("Opps! %s遇到了点麻烦:\n%s", botName, err.Error())
-					} else {
-						reply = fmt.Sprintf("Opps! %s遇到了点麻烦，正在紧张处理中...", botName)
-					}
-					rtm.SendMessage(rtm.NewOutgoingMessage(reply, channel))
-				}
+				checkError(v.Respond(msg), rtm, botName, channel)
 				break
 			}
 		}
