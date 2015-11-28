@@ -19,6 +19,7 @@ const (
 	mxTeamID = "T0F8CMAU9"
 )
 
+// 发送给机器人的命令(@opsbot)
 func checkMessage(msg string) (string, bool) {
 	r := regexp.MustCompile("^<@([\\d\\w]+)>:(.*)")
 	s := r.FindStringSubmatch(msg)
@@ -70,6 +71,7 @@ func handleMessage(rtm *slack.RTM) {
 	// 注册命令处理器
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Help))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Hello))
+	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Shell))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Time))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Mail))
 	plugin.BotCommands = append(plugin.BotCommands, new(plugin.Service))
